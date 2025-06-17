@@ -1,0 +1,94 @@
+repeat wait() until game:IsLoaded()
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+repeat wait() until player.Character
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- SETTINGS
+local autoDodge = true
+local dodgeRange = 10 -- jarak dodge (default: 10)
+local dodgeDelay = 0.5 -- waktu tunggu antar dodge (default: 0.5 detik)
+
+-- GUI Simple (tampilan setting)
+local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+gui.Name = "AutoDodgeGUI"
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 200, 0, 130)
+frame.Position = UDim2.new(0, 10, 0, 200)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BorderSizePixel = 0
+Instance.new("UICorner", frame)
+
+local title = Instance.new("TextLabel", frame)
+title.Text = "🤸 Auto Dodge Settings"
+title.Size = UDim2.new(1, 0, 0, 25)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 16
+
+-- Range
+local rangeBox = Instance.new("TextBox", frame)
+rangeBox.PlaceholderText = "Dodge Range (ex: 10)"
+rangeBox.Text = tostring(dodgeRange)
+rangeBox.Position = UDim2.new(0, 10, 0, 40)
+rangeBox.Size = UDim2.new(0, 180, 0, 25)
+rangeBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
+rangeBox.TextColor3 = Color3.new(1,1,1)
+rangeBox.ClearTextOnFocus = false
+rangeBox.FocusLost:Connect(function()
+	local val = tonumber(rangeBox.Text)
+	if val then
+		dodgeRange = val
+	end
+end)
+
+-- Delay
+local delayBox = Instance.new("TextBox", frame)
+delayBox.PlaceholderText = "Dodge Delay (ex: 0.5)"
+delayBox.Text = tostring(dodgeDelay)
+delayBox.Position = UDim2.new(0, 10, 0, 70)
+delayBox.Size = UDim2.new(0, 180, 0, 25)
+delayBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
+delayBox.TextColor3 = Color3.new(1,1,1)
+delayBox.ClearTextOnFocus = false
+delayBox.FocusLost:Connect(function()
+	local val = tonumber(delayBox.Text)
+	if val then
+		dodgeDelay = val
+	end
+end)
+
+-- Toggle Button
+local toggle = Instance.new("TextButton", frame)
+toggle.Text = "Auto Dodge: ON"
+toggle.Position = UDim2.new(0, 10, 0, 100)
+toggle.Size = UDim2.new(0, 180, 0, 25)
+toggle.BackgroundColor3 = Color3.fromRGB(60,60,60)
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.MouseButton1Click:Connect(function()
+	autoDodge = not autoDodge
+	toggle.Text = "Auto Dodge: " .. (autoDodge and "ON" or "OFF")
+end)
+
+-- Logic
+RunService.RenderStepped:Connect(function()
+	if not autoDodge then return end
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+			local dist = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+			if dist < dodgeRange then
+				ReplicatedStorage:WaitForChild("DodgeEvent"):FireServer()
+				task.wait(dodgeDelay)
+				break -- supaya gak spam semua musuh sekaligus
+			end
+		end
+	end
+end)
